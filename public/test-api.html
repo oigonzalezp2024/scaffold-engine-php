@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester - Add Module Inventory</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --success-color: #22c55e;
+            --error-color: #ef4444;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: var(--accent-color);
+        }
+
+        p.subtitle {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #cbd5e1;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        textarea {
+            height: 260px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-color);
+            color: #0f172a;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        button:hover {
+            background: #7dd3fc;
+        }
+
+        button:active {
+            transform: scale(0.99);
+        }
+
+        .response-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .response-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-badge.success { background: #166534; color: #4ade80; }
+        .status-badge.error { background: #991b1b; color: #fca5a5; }
+
+        pre {
+            background: #0f172a;
+            padding: 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #a5f3fc;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>API Module Inventory Tester</h1>
+    <p class="subtitle">Simulador de petición POST JSON para la generación e instalación del módulo.</p>
+
+    <form id="apiForm">
+        <div class="form-group">
+            <label for="endpoint">Endpoint URL</label>
+            <input type="text" id="endpoint" value="./api/add-module.php" required>
+        </div>
+
+        <div class="form-group">
+            <label for="jsonPayload">Payload JSON (Receta)</label>
+            <textarea id="jsonPayload" required></textarea>
+        </div>
+
+        <button type="submit" id="sendBtn">Enviar Petición POST</button>
+    </form>
+
+    <div class="response-container" id="responseContainer">
+        <div class="response-header">
+            <label>Respuesta del Servidor</label>
+            <span class="status-badge" id="statusBadge"></span>
+        </div>
+        <pre><code id="responseOutput"></code></pre>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('apiForm');
+        const payloadInput = document.getElementById('jsonPayload');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseOutput = document.getElementById('responseOutput');
+        const statusBadge = document.getElementById('statusBadge');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Payload por defecto
+        const defaultPayload = {
+            "receta": [
+                [
+                    "./template/.env",
+                    "./public/proyectos/inventario/.env",
+                    {
+                        "APP_ENV=local": "APP_ENV=production",
+                        "DB_NAME=base": "DB_NAME=inventario"
+                    }
+                ],
+                [
+                    "./template/composer.json",
+                    "./public/proyectos/inventario/composer.json",
+                    {
+                        "your-vendor/your-project": "oigonzalezp2024/your-project"
+                    }
+                ],
+                [
+                    "./template/composer.json",
+                    "./public/proyectos/inventario/composer2.json",
+                    {}
+                ]
+            ]
+        };
+
+        payloadInput.value = JSON.stringify(defaultPayload, null, 2);
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const endpoint = document.getElementById('endpoint').value;
+            const rawPayload = payloadInput.value;
+
+            // Validar que sea un JSON sintácticamente correcto antes de enviar
+            try {
+                JSON.parse(rawPayload);
+            } catch (err) {
+                alert('El Payload contiene errores de sintaxis JSON.');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Procesando...';
+            responseContainer.style.display = 'none';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: rawPayload
+                });
+
+                const data = await response.json();
+
+                // Formatear respuesta
+                responseOutput.textContent = JSON.stringify(data, null, 2);
+                statusBadge.textContent = `HTTP ${response.status} ${response.statusText}`;
+
+                if (response.ok) {
+                    statusBadge.className = 'status-badge success';
+                } else {
+                    statusBadge.className = 'status-badge error';
+                }
+
+                responseContainer.style.display = 'block';
+
+            } catch (error) {
+                responseOutput.textContent = JSON.stringify({
+                    status: 'error',
+                    message: 'Error de red o el servidor no devolvió un JSON válido.',
+                    detail: error.message
+                }, null, 2);
+
+                statusBadge.textContent = 'Error de Conexión';
+                statusBadge.className = 'status-badge error';
+                responseContainer.style.display = 'block';
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Enviar Petición POST';
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
