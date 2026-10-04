@@ -1,6 +1,6 @@
 
 {
-    "name": "oigonzalezp2024/scaffold-engine",
+    "name": "oigonzalezp2024/scaffold-engine-php",
     "description": "A clean-architecture PHP engine for dynamic file scaffolding, template replacement, and module provisioning.",
     "type": "library",
     "license": "MIT",
